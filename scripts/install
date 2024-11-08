@@ -1,0 +1,40 @@
+#!/bin/bash 
+
+#MARK: GLOBALS
+NAME="verdaccio"
+VERDACCIOSTORAGE=$(pwd)/../tmp/storage
+
+
+
+
+#MARK: BUILD
+echo "--- Building verdaccio"
+docker buildx build --progress=plain -t dx/verdaccio ..
+
+
+
+
+#MARK: STOP
+is_running=$(docker ps | grep "$NAME")
+if [ "$is_running" != "" ];
+then 
+    echo "--- Stopping verdaccio"
+    docker stop "$NAME"
+    echo "--- Removing verdaccio"
+    docker rm "$NAME"
+fi 
+
+#MARK: VOLUME
+echo "--- Creating volume"
+mkdir -p $VERDACCIOSTORAGE
+# Crear el volumen en docker
+docker volume create -d local --opt o=bind --opt device=$VERDACCIOSTORAGE --opt type=bind verdaccio-storage
+
+#MARK: RUN
+echo "--- Running verdaccio"
+docker run -d -it \
+    --name "$NAME" \
+    -v verdaccio-storage:/verdaccio/storage \
+    -v $(pwd)/../tmp/htpasswd:/verdaccio/conf/htpasswd \
+    -p "4873:4873" \
+    dx/verdaccio
